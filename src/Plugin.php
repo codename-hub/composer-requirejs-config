@@ -109,6 +109,7 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
               if(isset($json['main'])) {
                 $pathInfo = pathinfo($json['main']);
                 $installPath = $this->composer->getInstallationManager()->getInstallPath($package);
+                // Strip down to relative path
                 // TODO: strip out . ? convert to real path?
                 // path > name => path to main js without '.js' (filename)
                 $data[$t]['path'][$json['name']] = $installPath . $pathInfo['dirname'] . '/' . $pathInfo['filename'];
