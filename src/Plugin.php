@@ -171,6 +171,19 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
               }
             }
 
+            if(!empty($json['unpkg'])) {
+              $main = $json['unpkg'];
+            }
+
+            if(!empty($json['jsdelivr'])) {
+              $main = $json['jsdelivr'];
+            }
+            
+            if($main == null) {
+              $this->io->write("Skipping {$package->getName()}: no \"main\" / entrypoint found");
+              continue;
+            }
+
             $pathInfo = pathinfo($main);
 
             $installPath = $this->composer->getInstallationManager()->getInstallPath($package);
