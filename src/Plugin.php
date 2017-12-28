@@ -122,6 +122,9 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
 
           $name = $alias[$json['name']] ?? $json['name'];
 
+          // get installPath
+          $installPath = $this->composer->getInstallationManager()->getInstallPath($package);
+
           // we have a package
           if($json !== null) {
 
@@ -178,30 +181,70 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
             if(!empty($json['jsdelivr'])) {
               $main = $json['jsdelivr'];
             }
-            
+
+            // this is defined by our own components
+            // use assets: -> path to assets.json
+            if(!empty($json['assets'])) {
+              $assetsJsonPathInfo = pathinfo($json['assets']);
+              $fullPath = $installPath . $json['assets'];
+
+              if(file_exists($fullPath)) {
+                // parse json!
+                $assetsConfig = json_decode(file_get_contents($fullPath), true);
+
+                $depCollection = array();
+                if(!empty($assetConfig['assets']['js']['main'])) {
+                  $depCollection[] = $assetConfig['assets']['js']['main'];
+                }
+                if(!empty($assetConfig['assets']['css']['main'])) {
+                  $depCollection[] = $assetConfig['assets']['css']['main'];
+                }
+
+                // overwrite dependency/package entry point collection
+                if(count($depCollection) > 0) {
+                  $main = $depCollection;
+                }
+
+              } else {
+                $this->io->write("Skipping {$package->getName()}: \"assets\" key does not specify a valid file: {$fullPath}.");
+              }
+            }
+
             if($main == null) {
               $this->io->write("Skipping {$package->getName()}: no \"main\" / entrypoint found");
               continue;
             }
 
-            $pathInfo = pathinfo($main);
 
-            $installPath = $this->composer->getInstallationManager()->getInstallPath($package);
+            // make main an array, either way
+            if(!is_array($main)) {
+              $main = array($main);
+            }
 
-            // the real main path (without ext (?) )
-            $requireName = $pathInfo['dirname'] . '/' . $pathInfo['filename'];
+            $deps = array();
 
-            if(strpos($installPath, $basePath) === 0) {
-              // Strip down to relative path (basePath)
-              $relPath = str_replace($basePath, '', $installPath);
-              $virtualPath = self::normalizePath($relPath.$requireName);
-              $data['paths'][$name] = $virtualPath;
+            // collect the major requireJS config
+            foreach($main as $entrypoint) {
+              $pathInfo = pathinfo($entrypoint);
 
-              // shim on need:
-              if($shim) {
-                $data['shim'][$name] = $shim;
+              // the real main path (without ext (?) )
+              $requireName = $pathInfo['dirname'] . '/' . $pathInfo['filename'];
+
+              if(strpos($installPath, $basePath) === 0) {
+                // Strip down to relative path (basePath)
+                $relPath = str_replace($basePath, '', $installPath);
+                $virtualPath = self::normalizePath($relPath.$requireName);
+                $data['paths'][$name] = $virtualPath;
+
+                // shim on need:
+                if($shim) {
+                  $data['shim'][$name] = $shim;
+                }
               }
             }
+
+
+
           }
         }
       }
