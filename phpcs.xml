@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<ruleset name="Core CS">
+
+    <description>The default CoreFramework coding standard</description>
+
+    <!--
+    Default Tab with is 2 for core framework and derived apps.
+    -->
+    <arg name="tab-width" value="2"/>
+
+    <rule ref="Generic.WhiteSpace.ScopeIndent">
+		<properties>
+			<property name="indent" value="2"/>
+			<property name="tabIndent" value="false"/>
+		</properties>
+	</rule>
+
+</ruleset>
