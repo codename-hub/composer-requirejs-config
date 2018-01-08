@@ -3,16 +3,19 @@
 
     <description>The default CoreFramework coding standard</description>
 
-    <!--
-    Default Tab with is 2 for core framework and derived apps.
-    -->
-    <arg name="tab-width" value="2"/>
+    <rule ref="PSR1">
+        <!-- omit PSR1 method name validation, as we may use prefixes like view_ and action_ -->
+        <exclude name="PSR1.Methods.CamelCapsMethodName.NotCamelCaps"/>
 
-    <rule ref="Generic.WhiteSpace.ScopeIndent">
-		<properties>
-			<property name="indent" value="2"/>
-			<property name="tabIndent" value="false"/>
-		</properties>
-	</rule>
+        <!-- omit class name validator, as it requires the first letter to be capitalized -->
+        <exclude name="Squiz.Classes.ValidClassName" />
+
+        <!--
+        Some more rules?
+        <exclude name="Squiz.Functions.MultiLineFunctionDeclaration" />
+        <exclude name="PEAR.Functions.FunctionCallSignature"/>
+        <exclude name="Generic.Files.LineLength"/>
+        -->
+    </rule>
 
 </ruleset>
