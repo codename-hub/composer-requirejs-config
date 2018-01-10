@@ -190,16 +190,42 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
 
               if(file_exists($fullPath)) {
                 // parse json!
+                $assetsBasePath = $assetsJsonPathInfo['dirname'];
                 $assetsConfig = json_decode(file_get_contents($fullPath), true);
 
+                print_r($assetsConfig);
+
                 $depCollection = array();
+
+                if(!empty($assetsConfig['assets']['js'])) {
+                  echo("parse js assets");
+                  foreach($assetsConfig['assets']['js'] as $asset) {
+                    echo("asset:");
+                    print_r($asset);
+                    if($asset['name'] == 'main') {
+                      $depCollection[] = $assetsBasePath . '/' . $asset['files'][0];
+                    }
+                  }
+                }
+
+                if(!empty($assetsConfig['assets']['css'])) {
+                  echo("parse js assets");
+                  foreach($assetsConfig['assets']['css'] as $asset) {
+                    echo("asset:");
+                    print_r($asset);
+                    if($asset['name'] == 'main') {
+                      // $depCollection[] = $asset['files'][0];
+                    }
+                  }
+                }
+                  /*
                 if(!empty($assetConfig['assets']['js']['main'])) {
                   $depCollection[] = $assetConfig['assets']['js']['main'];
                 }
                 if(!empty($assetConfig['assets']['css']['main'])) {
                   $depCollection[] = $assetConfig['assets']['css']['main'];
                 }
-
+                */
                 // overwrite dependency/package entry point collection
                 if(count($depCollection) > 0) {
                   $main = $depCollection;
