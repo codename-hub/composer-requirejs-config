@@ -203,6 +203,7 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
                     echo("asset:");
                     print_r($asset);
                     if($asset['name'] == 'main') {
+                      // prepend assets base path...
                       $depCollection[] = $assetsBasePath . '/' . $asset['files'][0];
                     }
                   }
