@@ -129,9 +129,20 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
           if($json !== null) {
 
             $main = null;
+            $css = null;
             $shim = null;
 
             $main = $json['main'] ?? null;
+
+            if($main) {
+              $this->io->write("Package {$package->getName()}: \"main\" is: {$main}.");
+            }
+
+            // bower fallback?
+            // if(!$main) {
+            //   $bowerJson = $this->getPackageJson($package, 'bower.json');
+            //   $main = $bowerJson['main'];
+            // }
 
             //
             // browserify??
@@ -185,6 +196,10 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
             // this is defined by our own components
             // use assets: -> path to assets.json
             if(!empty($json['assets'])) {
+
+              // Write some info to CLI
+              $this->io->write("Package {$package->getName()}: \"assets\" is: \"{$json['assets']}\".");
+
               $assetsJsonPathInfo = pathinfo($json['assets']);
               $fullPath = $installPath . $json['assets'];
 
@@ -193,32 +208,70 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
                 $assetsBasePath = $assetsJsonPathInfo['dirname'];
                 $assetsConfig = json_decode(file_get_contents($fullPath), true);
 
-                print_r($assetsConfig);
+                // Write some info to CLI
+                $this->io->write("Package {$package->getName()}: \"assets\" is: \"{$json['assets']}\".");
+                // print_r($assetsConfig);
 
                 $depCollection = array();
+                $cssCollection = array();
 
                 if(!empty($assetsConfig['assets']['js'])) {
-                  echo("parse js assets");
+
+                  // echo("parse js assets");
+                  $this->io->write("Package {$package->getName()}: Searching for main entrypoint with name \"{$main}\".");
+
                   foreach($assetsConfig['assets']['js'] as $asset) {
-                    echo("asset:");
-                    print_r($asset);
-                    if($asset['name'] == 'main') {
+                    // echo("asset:");
+                    // print_r($asset);
+
+                    // Write some info to CLI
+                    $this->io->write("Package {$package->getName()}: Handling asset {$asset['name']}.");
+
+                    // either we have a main defined in package.json OR we fallback to "main"
+                    if($asset['name'] == ($main ?? 'main')) {
+
+                      $this->io->write("Package {$package->getName()}: Found main entrypoint \"{$asset['name']}\".");
+                      foreach($asset['files'] as $file) {
+
+                        // prepend assets base path...
+                        // if(substr($file, 0, 1) === '/') {
+                        //   // absolute path
+                        //   $this->io->write("Package {$package->getName()}: \"{$asset['name']}\" file: \"{$file}\"");
+                        //   $depCollection[] = $file;
+                        // } else {
+                          // relative path to assets base path
+                          $tFile = $assetsBasePath . '/' . $file;
+                          $this->io->write("Package {$package->getName()}: \"{$asset['name']}\" file: \"{$tFile}\"");
+                          $depCollection[] = $tFile;
+                        // }
+                      }
+
                       // prepend assets base path...
-                      $depCollection[] = $assetsBasePath . '/' . $asset['files'][0];
+                      // $depCollection[] = $assetsBasePath . '/' . $asset['files'][0];
+                      $main = $asset['name'];
                     }
                   }
                 }
 
-                if(!empty($assetsConfig['assets']['css'])) {
-                  echo("parse js assets");
-                  foreach($assetsConfig['assets']['css'] as $asset) {
-                    echo("asset:");
-                    print_r($asset);
-                    if($asset['name'] == 'main') {
-                      // $depCollection[] = $asset['files'][0];
-                    }
-                  }
-                }
+                // if(!empty($assetsConfig['assets']['css'])) {
+                //
+                //   $this->io->write("Package {$package->getName()}: Handling css assets...");
+                //   // echo("parse js assets");
+                //   foreach($assetsConfig['assets']['css'] as $asset) {
+                //
+                //     $this->io->write("Package {$package->getName()}: CSS Asset \"{$asset['name']}\".");
+                //     // echo("asset:");
+                //     print_r($asset);
+                //     if($asset['name'] == 'main') {
+                //       foreach($asset['files'] as $file) {
+                //         $tFile = $assetsBasePath . '/' . $file;
+                //         $cssCollection[] = $tFile;
+                //       }
+                //       // $depCollection[] = $asset['files'][0];
+                //     }
+                //   }
+                // }
+
                   /*
                 if(!empty($assetConfig['assets']['js']['main'])) {
                   $depCollection[] = $assetConfig['assets']['js']['main'];
@@ -231,9 +284,12 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
                 if(count($depCollection) > 0) {
                   $main = $depCollection;
                 }
+                if(count($cssCollection) > 0) {
+                  $css = $cssCollection;
+                }
 
               } else {
-                $this->io->write("Skipping {$package->getName()}: \"assets\" key does not specify a valid file: {$fullPath}.");
+                $this->io->write("Skipping {$package->getName()}: \"assets\" key does not specify a valid file: \"{$fullPath}\".");
               }
             }
 
@@ -250,27 +306,47 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
 
             $deps = array();
 
-            // collect the major requireJS config
-            foreach($main as $entrypoint) {
-              $pathInfo = pathinfo($entrypoint);
+            $pathValue = [];
 
-              // the real main path (without ext (?) )
-              $requireName = $pathInfo['dirname'] . '/' . $pathInfo['filename'];
+            $iterate = [
+              'js' => $main,
+              // 'css' => $css // skip css for now
+            ];
 
-              if(strpos($installPath, $basePath) === 0) {
-                // Strip down to relative path (basePath)
-                $relPath = str_replace($basePath, '', $installPath);
-                $virtualPath = self::normalizePath($relPath.$requireName);
-                $data['paths'][$name] = $virtualPath;
+            foreach($iterate as $type => $values) {
 
-                // shim on need:
-                if($shim) {
-                  $data['shim'][$name] = $shim;
+              if($values ?? false && count($values) > 0) {
+                // collect the major requireJS config
+                foreach($values as $entrypoint) {
+                  $pathInfo = pathinfo($entrypoint);
+
+                  // the real main path (without ext (?) )
+                  $requireName = $pathInfo['dirname'] . '/' . $pathInfo['filename'];
+
+                  if(strpos($installPath, $basePath) === 0) {
+                    // Strip down to relative path (basePath)
+                    $relPath = str_replace($basePath, '', $installPath);
+                    $virtualPath = self::normalizePath($relPath.$requireName);
+
+                    $this->io->write("Package {$package->getName()}: relPath: {$relPath}, requireName: {$requireName}");
+                    $this->io->write("Package {$package->getName()}: creating path reference to \"{$virtualPath}\" (basePath: {$basePath}, installPath: $installPath");
+
+                    if($type === 'js') {
+                      $pathValue[] = $virtualPath;
+                    } elseif($type === 'css') {
+                      $pathValue[] = 'css!'.$virtualPath;
+                    }
+                  }
                 }
               }
             }
 
+            $data['paths'][$name] = count($pathValue) === 1 ? $pathValue[0] : $pathValue;
 
+            // shim on need:
+            if($shim) {
+              $data['shim'][$name] = $shim;
+            }
 
           }
         }
@@ -287,6 +363,16 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
    * @param array $config
    */
   protected function writeRequireConfigJs(string $file, array $config) {
+    // $requireCss = [
+    //   'map' => [
+    //     '*' => [
+    //       'css' => 'require-css/css'
+    //     ]
+    //   ]
+    // ];
+    //
+    // $config = array_merge($config, $requireCss);
+
     $content = "require.config(". json_encode($config, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES) . ");";
     $this->io->write("Writing requireJS config file (" .$file. "):\n" . $content);
     file_put_contents($file, $content);
@@ -296,10 +382,10 @@ class Plugin implements PluginInterface, \Composer\EventDispatcher\EventSubscrib
    * [getPackageJson description]
    * @return [type] [description]
    */
-  protected function getPackageJson(\Composer\Package\PackageInterface $package) {
+  protected function getPackageJson(\Composer\Package\PackageInterface $package, string $filename = 'package.json') {
     // retrieves the NPM Package.json in install dir, if available
     $installPath = $this->composer->getInstallationManager()->getInstallPath($package);
-    $packageJsonFile = $installPath . 'package.json';
+    $packageJsonFile = $installPath . $filename;
     if(file_exists($packageJsonFile)) {
       $packageJson = file_get_contents($packageJsonFile);
       $decoded = json_decode($packageJson, true);
