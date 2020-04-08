@@ -1,7 +1,6 @@
 {
 	"name": "codename/composer-requirejs-config",
 	"description": "Generates a requireJS config js file from npm/bower assets",
-  "version": "0.0.1",
   "type": "composer-plugin",
 	"autoload": {
 		"psr-4": {"codename\\ComposerRequirejsConfig\\": "src/"}
