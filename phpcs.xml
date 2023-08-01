@@ -1,21 +1,21 @@
 <?xml version="1.0"?>
 <ruleset name="Core CS">
 
-    <description>The default CoreFramework coding standard</description>
+  <description>The default CoreFramework coding standard</description>
 
-    <rule ref="PSR1">
-        <!-- omit PSR1 method name validation, as we may use prefixes like view_ and action_ -->
-        <exclude name="PSR1.Methods.CamelCapsMethodName.NotCamelCaps"/>
+  <rule ref="PSR12">
+    <!-- omit PSR1 method name validation, as we may use prefixes like view_ and action_ -->
+    <exclude name="PSR1.Methods.CamelCapsMethodName.NotCamelCaps"/>
 
-        <!-- omit class name validator, as it requires the first letter to be capitalized -->
-        <exclude name="Squiz.Classes.ValidClassName" />
+    <!-- omit class name validator, as it requires the first letter to be capitalized -->
+    <exclude name="Squiz.Classes.ValidClassName"/>
 
-        <!--
-        Some more rules?
-        <exclude name="Squiz.Functions.MultiLineFunctionDeclaration" />
-        <exclude name="PEAR.Functions.FunctionCallSignature"/>
-        <exclude name="Generic.Files.LineLength"/>
-        -->
-    </rule>
+    <!--
+    Some more rules?
+    <exclude name="Squiz.Functions.MultiLineFunctionDeclaration" />
+    <exclude name="PEAR.Functions.FunctionCallSignature"/>
+    <exclude name="Generic.Files.LineLength"/>
+    -->
+  </rule>
 
 </ruleset>
